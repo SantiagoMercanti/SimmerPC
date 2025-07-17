@@ -18,18 +18,43 @@ const ProjectModal = ({ onClose }: { onClose: () => void }) => {
   const [sensores, setSensores] = useState<Elemento[]>([]);
   const [actuadores, setActuadores] = useState<Elemento[]>([]);
 
+  // useEffect(() => {
+  //   // Simulación de fetch (reemplazar luego con fetch real a API)
+  //   const sensoresFicticios = [
+  //     { id: '1', nombre: 'Sensor de Temperatura' },
+  //     { id: '2', nombre: 'Sensor de pH' },
+  //   ];
+  //   const actuadoresFicticios = [
+  //     { id: '1', nombre: 'Válvula A' },
+  //     { id: '2', nombre: 'Bomba 1' },
+  //   ];
+  //   setSensores(sensoresFicticios);
+  //   setActuadores(actuadoresFicticios);
+  // }, []);
   useEffect(() => {
-    // Simulación de fetch (reemplazar luego con fetch real a API)
-    const sensoresFicticios = [
-      { id: '1', nombre: 'Sensor de Temperatura' },
-      { id: '2', nombre: 'Sensor de pH' },
-    ];
-    const actuadoresFicticios = [
-      { id: '1', nombre: 'Válvula A' },
-      { id: '2', nombre: 'Bomba 1' },
-    ];
-    setSensores(sensoresFicticios);
-    setActuadores(actuadoresFicticios);
+    const fetchDatos = async () => {
+      try {
+        const resSensores = await fetch('/api/sensores');
+        const sensoresData = await resSensores.json();
+        const sensoresFormateados = sensoresData.map((s: any) => ({
+          id: s.sensor_id.toString(),
+          nombre: s.nombre,
+        }));
+        setSensores(sensoresFormateados);
+
+        const resActuadores = await fetch('/api/actuadores');
+        const actuadoresData = await resActuadores.json();
+        const actuadoresFormateados = actuadoresData.map((a: any) => ({
+          id: a.actuator_id.toString(),
+          nombre: a.nombre,
+        }));
+        setActuadores(actuadoresFormateados);
+      } catch (err) {
+        console.error('Error al obtener sensores o actuadores:', err);
+      }
+    };
+
+    fetchDatos();
   }, []);
 
   const toggleSeleccion = (id: string, tipo: 'sensor' | 'actuador') => {
@@ -49,11 +74,33 @@ const ProjectModal = ({ onClose }: { onClose: () => void }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Proyecto nuevo:', form);
-    onClose();
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    const res = await fetch('/api/proyectos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: form.nombre,
+        descripcion: form.descripcion,
+        sensoresSeleccionados: form.sensoresSeleccionados.map(Number),
+        actuadoresSeleccionados: form.actuadoresSeleccionados.map(Number),
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Error al guardar el proyecto');
+    }
+
+    const data = await res.json();
+    console.log('Proyecto creado con éxito:', data);
+    onClose(); // cerrar modal solo si fue exitoso
+  } catch (err) {
+    console.error('Error al enviar proyecto:', err);
+    alert('Ocurrió un error al guardar el proyecto.');
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">

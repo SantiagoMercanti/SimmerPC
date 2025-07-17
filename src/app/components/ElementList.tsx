@@ -18,13 +18,14 @@ const ElementList = ({ title }: { title?: string }) => {
       let url = '';
       if (title === 'Sensores') url = '/api/sensores';
       else if (title === 'Actuadores') url = '/api/actuadores';
+      else if (title === 'Proyectos') url = '/api/proyectos';
       else return;
 
       const res = await fetch(url);
       const data = await res.json();
 
       const normalizados = data.map((item: any) => ({
-        id: item.sensor_id ?? item.actuator_id ?? item.id,
+        id: item.sensor_id ?? item.actuator_id ?? item.project_id ?? item.id,
         nombre: item.nombre,
       }));
 
@@ -70,7 +71,12 @@ const ElementList = ({ title }: { title?: string }) => {
 
       {isModalOpen && (
         title === 'Proyectos' ? (
-          <ProjectModal onClose={() => setIsModalOpen(false)} />
+          <ProjectModal
+            onClose={() => {
+              setIsModalOpen(false);
+              fetchData();
+            }}
+          />
         ) : (
           <SensorActuatorModal
             title={title}
