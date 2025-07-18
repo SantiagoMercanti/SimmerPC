@@ -3,9 +3,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Obtener un proyecto por ID
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+// GET: Obtener proyecto por ID
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
 
   try {
     const proyecto = await prisma.proyecto.findUnique({
@@ -23,10 +23,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-// Actualizar un proyecto por ID
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+// PUT: Actualizar proyecto
+export async function PUT(req: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
   const body = await req.json();
+
+  if (!body.nombre || !body.descripcion) {
+    return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
+  }
 
   try {
     const proyectoActualizado = await prisma.proyecto.update({
@@ -44,18 +48,36 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-// Eliminar un proyecto por ID
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+// DELETE: Eliminar proyecto
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const { id } = params;
+  const proyectoId = Number(id);
 
   try {
+    // 1. Eliminar relaciones en ProyectoSensor
+    await prisma.proyectoSensor.deleteMany({
+      where: { proyectoId },
+    });
+
+    // 2. Eliminar relaciones en ProyectoActuador
+    await prisma.proyectoActuador.deleteMany({
+      where: { proyectoId },
+    });
+
+    // 3. Eliminar el Proyecto
     await prisma.proyecto.delete({
-      where: { project_id: Number(id) },
+      where: { project_id: proyectoId },
     });
 
     return NextResponse.json({ message: 'Proyecto eliminado correctamente' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al eliminar proyecto:', error);
-    return NextResponse.json({ error: 'Error al eliminar proyecto' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Error al eliminar proyecto', detalle: error.message },
+      { status: 500 }
+    );
   }
 }

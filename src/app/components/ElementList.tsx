@@ -10,13 +10,36 @@ const ElementList = ({ title }: { title?: string }) => {
   const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
 
   const handleAddClick = () => {
-    setElementoAEditar(null); // limpiar selección anterior
+    setElementoAEditar(null);
     setIsModalOpen(true);
   };
 
   const handleEditClick = (elemento: { id: number; nombre: string }) => {
     setElementoAEditar(elemento);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteClick = async (id: number) => {
+    const confirmar = confirm('¿Seguro que desea eliminar este elemento?');
+    if (!confirmar) return;
+
+    try {
+      let url = '';
+      if (title === 'Sensores') url = `/api/sensores/${id}`;
+      else if (title === 'Actuadores') url = `/api/actuadores/${id}`;
+      else if (title === 'Proyectos') url = `/api/proyectos/${id}`;
+      else return;
+
+      const res = await fetch(url, { method: 'DELETE' });
+
+      if (res.ok) {
+        fetchData();
+      } else {
+        console.error('Error al eliminar el elemento');
+      }
+    } catch (error) {
+      console.error('Error en la eliminación:', error);
+    }
   };
 
   const fetchData = async () => {
@@ -58,28 +81,35 @@ const ElementList = ({ title }: { title?: string }) => {
             className="flex items-center justify-between p-4 bg-gray-100 rounded-md"
           >
             <span className="text-gray-700">{el.nombre}</span>
-            <button
-              className="text-blue-500 hover:text-blue-700 transition-colors"
-              onClick={() => handleEditClick(el)}
-            >
-              Editar
-            </button>
+            <div className="flex space-x-2">
+              <button
+                className="text-blue-500 hover:text-blue-700"
+                onClick={() => handleEditClick(el)}
+              >
+                Editar
+              </button>
+              <button
+                className="text-red-500 hover:text-red-700"
+                onClick={() => handleDeleteClick(el.id)}
+              >
+                Eliminar
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Botón para añadir un nuevo elemento */}
       <div className="mt-6 text-center">
         <button
           onClick={handleAddClick}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
         >
           +
         </button>
       </div>
 
-      {isModalOpen && (
-        title === 'Proyectos' ? (
+      {isModalOpen &&
+        (title === 'Proyectos' ? (
           <ProjectModal
             onClose={() => {
               setIsModalOpen(false);
@@ -95,12 +125,13 @@ const ElementList = ({ title }: { title?: string }) => {
             onClose={() => {
               setIsModalOpen(false);
               setElementoAEditar(null);
+              fetchData();
             }}
             onSave={fetchData}
             elementoAEditar={elementoAEditar ?? undefined}
           />
         )
-      )}
+        )}
     </div>
   );
 };
