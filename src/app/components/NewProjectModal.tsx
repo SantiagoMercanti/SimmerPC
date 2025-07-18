@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React, { useEffect, useState } from 'react';
 
@@ -7,7 +7,20 @@ interface Elemento {
   nombre: string;
 }
 
-const ProjectModal = ({ onClose }: { onClose: () => void }) => {
+interface ProyectoAEditar {
+  id: number;
+  nombre: string;
+}
+
+const ProjectModal = ({
+  onClose,
+  onSave,
+  proyectoAEditar,
+}: {
+  onClose: () => void;
+  onSave?: () => void;
+  proyectoAEditar?: ProyectoAEditar;
+}) => {
   const [form, setForm] = useState({
     nombre: '',
     descripcion: '',
@@ -18,37 +31,16 @@ const ProjectModal = ({ onClose }: { onClose: () => void }) => {
   const [sensores, setSensores] = useState<Elemento[]>([]);
   const [actuadores, setActuadores] = useState<Elemento[]>([]);
 
-  // useEffect(() => {
-  //   // Simulación de fetch (reemplazar luego con fetch real a API)
-  //   const sensoresFicticios = [
-  //     { id: '1', nombre: 'Sensor de Temperatura' },
-  //     { id: '2', nombre: 'Sensor de pH' },
-  //   ];
-  //   const actuadoresFicticios = [
-  //     { id: '1', nombre: 'Válvula A' },
-  //     { id: '2', nombre: 'Bomba 1' },
-  //   ];
-  //   setSensores(sensoresFicticios);
-  //   setActuadores(actuadoresFicticios);
-  // }, []);
   useEffect(() => {
     const fetchDatos = async () => {
       try {
         const resSensores = await fetch('/api/sensores');
         const sensoresData = await resSensores.json();
-        const sensoresFormateados = sensoresData.map((s: any) => ({
-          id: s.sensor_id.toString(),
-          nombre: s.nombre,
-        }));
-        setSensores(sensoresFormateados);
+        setSensores(sensoresData.map((s: any) => ({ id: s.sensor_id.toString(), nombre: s.nombre })));
 
         const resActuadores = await fetch('/api/actuadores');
         const actuadoresData = await resActuadores.json();
-        const actuadoresFormateados = actuadoresData.map((a: any) => ({
-          id: a.actuator_id.toString(),
-          nombre: a.nombre,
-        }));
-        setActuadores(actuadoresFormateados);
+        setActuadores(actuadoresData.map((a: any) => ({ id: a.actuator_id.toString(), nombre: a.nombre })));
       } catch (err) {
         console.error('Error al obtener sensores o actuadores:', err);
       }
@@ -56,6 +48,29 @@ const ProjectModal = ({ onClose }: { onClose: () => void }) => {
 
     fetchDatos();
   }, []);
+
+  // Cargar datos del proyecto a editar
+  useEffect(() => {
+    if (proyectoAEditar) {
+      const fetchProyecto = async () => {
+        try {
+          const res = await fetch(`/api/proyectos/${proyectoAEditar.id}`);
+          const data = await res.json();
+
+          setForm({
+            nombre: data.nombre,
+            descripcion: data.descripcion,
+            sensoresSeleccionados: data.sensores.map((s: any) => s.sensor_id.toString()),
+            actuadoresSeleccionados: data.actuadores.map((a: any) => a.actuator_id.toString()),
+          });
+        } catch (err) {
+          console.error('Error al cargar proyecto:', err);
+        }
+      };
+
+      fetchProyecto();
+    }
+  }, [proyectoAEditar]);
 
   const toggleSeleccion = (id: string, tipo: 'sensor' | 'actuador') => {
     setForm(prev => {
@@ -74,38 +89,45 @@ const ProjectModal = ({ onClose }: { onClose: () => void }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  try {
-    const res = await fetch('/api/proyectos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre: form.nombre,
-        descripcion: form.descripcion,
-        sensoresSeleccionados: form.sensoresSeleccionados.map(Number),
-        actuadoresSeleccionados: form.actuadoresSeleccionados.map(Number),
-      }),
-    });
+    try {
+      const url = `/api/proyectos${proyectoAEditar ? `/${proyectoAEditar.id}` : ''}`;
+      const method = proyectoAEditar ? 'PUT' : 'POST';
 
-    if (!res.ok) {
-      throw new Error('Error al guardar el proyecto');
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: form.nombre,
+          descripcion: form.descripcion,
+          sensoresSeleccionados: form.sensoresSeleccionados.map(Number),
+          actuadoresSeleccionados: form.actuadoresSeleccionados.map(Number),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Error al guardar el proyecto');
+      }
+
+      const data = await res.json();
+      console.log(`Proyecto ${proyectoAEditar ? 'editado' : 'creado'} con éxito:`, data);
+
+      onSave?.(); // trigger para que recargue la lista
+      onClose();
+    } catch (err) {
+      console.error('Error al enviar proyecto:', err);
+      alert('Ocurrió un error al guardar el proyecto.');
     }
-
-    const data = await res.json();
-    console.log('Proyecto creado con éxito:', data);
-    onClose(); // cerrar modal solo si fue exitoso
-  } catch (err) {
-    console.error('Error al enviar proyecto:', err);
-    alert('Ocurrió un error al guardar el proyecto.');
-  }
-};
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg w-full max-w-xl shadow-lg max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-semibold mb-4 text-gray-800">Agregar Proyecto</h3>
+        <h3 className="text-xl font-semibold mb-4 text-gray-800">
+          {proyectoAEditar ? 'Editar Proyecto' : 'Agregar Proyecto'}
+        </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import SensorActuatorModal from './NewElemetModal';
@@ -6,12 +6,18 @@ import ProjectModal from './NewProjectModal';
 
 const ElementList = ({ title }: { title?: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
+  const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
 
   const handleAddClick = () => {
+    setElementoAEditar(null); // limpiar selección anterior
     setIsModalOpen(true);
   };
 
-  const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
+  const handleEditClick = (elemento: { id: number; nombre: string }) => {
+    setElementoAEditar(elemento);
+    setIsModalOpen(true);
+  };
 
   const fetchData = async () => {
     try {
@@ -52,7 +58,10 @@ const ElementList = ({ title }: { title?: string }) => {
             className="flex items-center justify-between p-4 bg-gray-100 rounded-md"
           >
             <span className="text-gray-700">{el.nombre}</span>
-            <button className="text-blue-500 hover:text-blue-700 transition-colors">
+            <button
+              className="text-blue-500 hover:text-blue-700 transition-colors"
+              onClick={() => handleEditClick(el)}
+            >
               Editar
             </button>
           </div>
@@ -74,16 +83,21 @@ const ElementList = ({ title }: { title?: string }) => {
           <ProjectModal
             onClose={() => {
               setIsModalOpen(false);
+              setElementoAEditar(null);
               fetchData();
             }}
+            onSave={fetchData}
+            proyectoAEditar={elementoAEditar ?? undefined}
           />
         ) : (
           <SensorActuatorModal
             title={title}
-            onClose={() => setIsModalOpen(false)}
-            onSave={async () => {
-              await fetchData();
+            onClose={() => {
+              setIsModalOpen(false);
+              setElementoAEditar(null);
             }}
+            onSave={fetchData}
+            elementoAEditar={elementoAEditar ?? undefined}
           />
         )
       )}

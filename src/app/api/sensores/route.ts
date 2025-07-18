@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const prisma = new PrismaClient();
 
+// Obtener todos los sensores
 export async function GET() {
   try {
     const sensores = await prisma.sensor.findMany();
@@ -13,11 +14,11 @@ export async function GET() {
   }
 }
 
+// Crear un nuevo sensor
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-
-    const { nombre, descripcion, unidad_de_medida, valor_min, valor_max } = body;
+    const { nombre, descripcion, unidad_de_medida, valor_min, valor_max, fuente_datos } = body;
 
     if (!nombre || !descripcion || !unidad_de_medida || valor_min === undefined || valor_max === undefined) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
         unidad_de_medida,
         valor_min: parseFloat(valor_min),
         valor_max: parseFloat(valor_max),
+        fuente_datos: fuente_datos || '',
       },
     });
 

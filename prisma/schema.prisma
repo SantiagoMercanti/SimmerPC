@@ -30,6 +30,7 @@ model Sensor {
   unidad_de_medida String
   valor_max       Float
   valor_min       Float
+  fuente_datos String @default("")
   proyectos       ProyectoSensor[]
 }
 
@@ -40,6 +41,7 @@ model Actuador {
   unidad_de_medida String
   valor_max       Float
   valor_min       Float
+  fuente_datos String @default("")
   proyectos       ProyectoActuador[]
 }
 
