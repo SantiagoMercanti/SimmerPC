@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import SensorActuatorModal from './NewElemetModal';
 import ProjectModal from './NewProjectModal';
+import SensorDetailsModal from './SensorDetailsModal';
 
 const ElementList = ({ title }: { title?: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
   const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
+  const [sensorSeleccionado, setSensorSeleccionado] = useState<any>(null);
 
   const handleAddClick = () => {
     setElementoAEditar(null);
@@ -39,6 +41,28 @@ const ElementList = ({ title }: { title?: string }) => {
       }
     } catch (error) {
       console.error('Error en la eliminación:', error);
+    }
+  };
+
+  const handleNombreClick = async (id: number) => {
+    if (title !== 'Sensores') return;
+
+    try {
+      const res = await fetch(`/api/sensores/${id}`);
+      const data = await res.json();
+
+      // Podés mapear proyectos si luego incluís esa relación en tu API
+      // data.proyectos = [{ nombre: 'Proyecto A' }, { nombre: 'Proyecto B' }]; // Hardcoded por ahora
+      // Asegúrate de que el backend esté devolviendo sensor.proyectos[i].proyecto.nombre
+      data.proyectos = data.proyectos?.map((ps: any) => ps.proyecto) ?? [];
+      if (!data) {
+        console.error('Sensor no encontrado');
+        return;
+      }
+
+      setSensorSeleccionado(data);
+    } catch (error) {
+      console.error('Error al obtener detalle del sensor:', error);
     }
   };
 
@@ -80,7 +104,12 @@ const ElementList = ({ title }: { title?: string }) => {
             key={el.id}
             className="flex items-center justify-between p-4 bg-gray-100 rounded-md"
           >
-            <span className="text-gray-700">{el.nombre}</span>
+            <button
+              className="text-left text-blue-600 font-medium hover:underline"
+              onClick={() => handleNombreClick(el.id)}
+            >
+              {el.nombre}
+            </button>
             <div className="flex space-x-2">
               <button
                 className="text-blue-500 hover:text-blue-700"
@@ -132,6 +161,13 @@ const ElementList = ({ title }: { title?: string }) => {
           />
         )
         )}
+      {sensorSeleccionado && title === 'Sensores' && (
+        <SensorDetailsModal
+          sensor={sensorSeleccionado}
+          onClose={() => setSensorSeleccionado(null)}
+        />
+      )}
+
     </div>
   );
 };

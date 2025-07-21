@@ -10,6 +10,13 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   try {
     const sensor = await prisma.sensor.findUnique({
       where: { sensor_id: Number(id) },
+      include: {
+        proyectos: {
+          include: {
+            proyecto: true,
+          },
+        },
+      },
     });
 
     if (!sensor) {
@@ -48,18 +55,25 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-// Eliminar sensor por ID (opcional)
+// Eliminar sensor por ID
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
+  const sensorId = Number(id);
 
   try {
+    // 1. Eliminar relaciones en ProyectoSensor
+    await prisma.proyectoSensor.deleteMany({
+      where: { sensorId: sensorId },
+    });
+
+    // 2. Eliminar el sensor
     await prisma.sensor.delete({
-      where: { sensor_id: Number(id) },
+      where: { sensor_id: sensorId },
     });
 
     return NextResponse.json({ message: 'Sensor eliminado correctamente' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al eliminar sensor:', error);
-    return NextResponse.json({ error: 'Error al eliminar sensor' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al eliminar sensor', detalle: error.message }, { status: 500 });
   }
 }

@@ -51,15 +51,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 // Eliminar un actuador por ID
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
+  const actuadorId = Number(id);
 
   try {
+    // 1. Eliminar relaciones en ProyectoActuador
+    await prisma.proyectoActuador.deleteMany({
+      where: { actuadorId: actuadorId },
+    });
+
+    // 2. Eliminar el actuador
     await prisma.actuador.delete({
-      where: { actuator_id: Number(id) },
+      where: { actuator_id: actuadorId },
     });
 
     return NextResponse.json({ message: 'Actuador eliminado correctamente' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al eliminar actuador:', error);
-    return NextResponse.json({ error: 'Error al eliminar actuador' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al eliminar actuador', detalle: error.message }, { status: 500 });
   }
 }
