@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import SensorActuatorModal from './NewElemetModal';
+import SensorActuatorModal from './NewElementModal';
 import ProjectModal from './NewProjectModal';
 import SensorDetailsModal from './SensorDetailsModal';
 
@@ -51,9 +51,6 @@ const ElementList = ({ title }: { title?: string }) => {
       const res = await fetch(`/api/sensores/${id}`);
       const data = await res.json();
 
-      // Podés mapear proyectos si luego incluís esa relación en tu API
-      // data.proyectos = [{ nombre: 'Proyecto A' }, { nombre: 'Proyecto B' }]; // Hardcoded por ahora
-      // Asegúrate de que el backend esté devolviendo sensor.proyectos[i].proyecto.nombre
       data.proyectos = data.proyectos?.map((ps: any) => ps.proyecto) ?? [];
       if (!data) {
         console.error('Sensor no encontrado');
@@ -105,7 +102,7 @@ const ElementList = ({ title }: { title?: string }) => {
             className="flex items-center justify-between p-4 bg-gray-100 rounded-md"
           >
             <button
-              className="text-left text-blue-600 font-medium hover:underline"
+              className="text-left text-gray-800 font-bold hover:text-gray-500"
               onClick={() => handleNombreClick(el.id)}
             >
               {el.nombre}
