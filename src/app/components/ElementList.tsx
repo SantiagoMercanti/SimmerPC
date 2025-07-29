@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import SensorActuatorModal from './NewElementModal';
 import ProjectModal from './NewProjectModal';
 import SensorDetailsModal from './SensorDetailsModal';
+import ActuatorDetailsModal from './ActuatorDetailsModal';
 
 const ElementList = ({ title }: { title?: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
   const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
   const [sensorSeleccionado, setSensorSeleccionado] = useState<any>(null);
+  const [actuadorSeleccionado, setActuadorSeleccionado] = useState<any>(null);
 
   const handleAddClick = () => {
     setElementoAEditar(null);
@@ -45,21 +47,20 @@ const ElementList = ({ title }: { title?: string }) => {
   };
 
   const handleNombreClick = async (id: number) => {
-    if (title !== 'Sensores') return;
-
     try {
-      const res = await fetch(`/api/sensores/${id}`);
-      const data = await res.json();
-
-      data.proyectos = data.proyectos?.map((ps: any) => ps.proyecto) ?? [];
-      if (!data) {
-        console.error('Sensor no encontrado');
-        return;
+      if (title === 'Sensores') {
+        const res = await fetch(`/api/sensores/${id}`);
+        const data = await res.json();
+        data.proyectos = data.proyectos?.map((ps: any) => ps.proyecto) ?? [];
+        setSensorSeleccionado(data);
+      } else if (title === 'Actuadores') {
+        const res = await fetch(`/api/actuadores/${id}`);
+        const data = await res.json();
+        data.proyectos = data.proyectos?.map((pa: any) => pa.proyecto) ?? [];
+        setActuadorSeleccionado(data);
       }
-
-      setSensorSeleccionado(data);
     } catch (error) {
-      console.error('Error al obtener detalle del sensor:', error);
+      console.error('Error al obtener detalle:', error);
     }
   };
 
@@ -162,6 +163,12 @@ const ElementList = ({ title }: { title?: string }) => {
         <SensorDetailsModal
           sensor={sensorSeleccionado}
           onClose={() => setSensorSeleccionado(null)}
+        />
+      )}
+      {actuadorSeleccionado && title === 'Actuadores' && (
+        <ActuatorDetailsModal
+          actuador={actuadorSeleccionado}
+          onClose={() => setActuadorSeleccionado(null)}
         />
       )}
 

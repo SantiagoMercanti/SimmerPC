@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import mqtt from 'mqtt';
 
-interface MqttSensorValueProps {
+interface MqttShowValueProps {
   topic: string; // fuente_datos
 }
 
-export default function MqttSensorValue({ topic }: MqttSensorValueProps) {
+export default function MqttShowValue({ topic }: MqttShowValueProps) {
   const [valor, setValor] = useState<string | null>(null);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import SensorMQTTValue from './MqttSensorValue';
+import MqttShowValue from './MqttShowValue';
 
 interface SensorDetailsModalProps {
   sensor: {
@@ -34,7 +34,7 @@ const SensorDetailsModal: React.FC<SensorDetailsModalProps> = ({ sensor, onClose
         <p><strong>Rango estable:</strong> {sensor.valor_min} {sensor.unidad_de_medida} - {sensor.valor_max} {sensor.unidad_de_medida}</p>
         <p>
           <strong>Valor Actual:</strong>{' '}
-          <SensorMQTTValue topic={sensor.fuente_datos} />
+          <MqttShowValue topic={sensor.fuente_datos} />
           <span className="text-green-600 font-semibold"> {sensor.unidad_de_medida}</span>        </p>
         <p>
           <strong>Proyectos:</strong>{' '}
