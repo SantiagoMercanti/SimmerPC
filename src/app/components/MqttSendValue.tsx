@@ -14,7 +14,7 @@ export default function MqttSendValue({ topic }: MqttSendValueProps) {
   const handleSend = () => {
     if (!topic || valor.trim() === '') return;
 
-    const client = mqtt.connect('ws://broker.emqx.io:8083/mqtt');
+    const client = mqtt.connect('ws://localhost:1884');
 
     setStatus('sending');
 

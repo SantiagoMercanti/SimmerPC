@@ -4,24 +4,29 @@ import { useEffect, useState } from 'react';
 import mqtt from 'mqtt';
 
 interface MqttShowValueProps {
-  topic: string; // fuente_datos
+  topic: string;
 }
 
 export default function MqttShowValue({ topic }: MqttShowValueProps) {
   const [valor, setValor] = useState<string | null>(null);
 
   useEffect(() => {
-    const client = mqtt.connect('wss://2186d1da6b28407e82998361029157f6.s1.eu.hivemq.cloud:8884/mqtt', {
-      username: 'simmerhivemq',
-      password: 'Newport123',
+    const client = mqtt.connect('ws://localhost:1884', {
       clientId: 'web_' + Math.random().toString(16).slice(2, 8),
       connectTimeout: 4000,
+      reconnectPeriod: 1000,
       clean: true,
     });
 
     client.on('connect', () => {
-      console.log('✅ Conectado a HiveMQ');
-      client.subscribe(topic);
+      console.log('✅ Conectado a Mosquitto por WebSocket');
+      client.subscribe(topic, (err) => {
+        if (err) {
+          console.error('❌ Error al suscribirse:', err);
+        } else {
+          console.log('📩 Suscrito al tópico:', topic);
+        }
+      });
     });
 
     client.on('message', (t, message) => {
@@ -35,9 +40,9 @@ export default function MqttShowValue({ topic }: MqttShowValueProps) {
     });
 
     return () => {
-      client.end();
+      if (client.connected) client.end();
     };
   }, [topic]);
 
-  return <span>{valor ?? 'Esperando...'}</span>;
+  return <span>{valor ?? ' '}</span>;
 }
