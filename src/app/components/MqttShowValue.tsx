@@ -1,39 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import mqtt from 'mqtt';
 
 interface MqttShowValueProps {
-  topic: string; // fuente_datos
+  topic: string; // ejemplo: "valor-temp1"
 }
 
 export default function MqttShowValue({ topic }: MqttShowValueProps) {
   const [valor, setValor] = useState<string | null>(null);
+  const [error, setError] = useState<boolean>(false);
 
   useEffect(() => {
     if (!topic) return;
 
-    const client = mqtt.connect('ws://broker.emqx.io:8083/mqtt');
-
-    client.on('connect', () => {
-      console.log('Conectado a EMQX MQTT, suscribiendo a:', topic);
-      client.subscribe(topic);
-    });
-
-    client.on('message', (receivedTopic, message) => {
-      if (receivedTopic === topic) {
-        setValor(message.toString());
-      }
-    });
-
-    return () => {
-      client.end();
-    };
+    fetch(`http://192.168.10.101:1880/${topic}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Error en la respuesta del servidor');
+        return res.json();
+      })
+      .then((data) => {
+        if (data.valor !== undefined) {
+          setValor(data.valor.toString());
+          setError(false);
+        } else {
+          throw new Error('No se encontró el valor en la respuesta');
+        }
+      })
+      .catch((err) => {
+        console.error('Error al obtener el valor:', err, topic);
+        setError(true);
+      });
   }, [topic]);
 
   return (
-    <span className="text-green-600 font-semibold">
-      {valor ?? 'Esperando...'}
+    <span className={`font-semibold ${error ? 'text-red-600' : 'text-green-600'}`}>
+      {error ? 'Error al obtener valor' : valor ?? 'Esperando...'}
     </span>
   );
 }

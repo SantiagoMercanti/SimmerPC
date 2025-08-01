@@ -1,41 +1,38 @@
 'use client';
 
 import { useState } from 'react';
-import mqtt from 'mqtt';
 
 interface MqttSendValueProps {
-  topic: string; // fuente_datos
+  topic: string; // ejemplo: "simmer/actuador/temp1"
 }
 
 export default function MqttSendValue({ topic }: MqttSendValueProps) {
   const [valor, setValor] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!topic || valor.trim() === '') return;
-
-    const client = mqtt.connect('ws://broker.emqx.io:8083/mqtt');
 
     setStatus('sending');
 
-    client.on('connect', () => {
-      console.log('Conectado a EMQX MQTT. Publicando:', valor, 'en', topic);
-      client.publish(topic, valor, {}, (err) => {
-        if (err) {
-          console.error('Error al publicar:', err);
-          setStatus('error');
-        } else {
-          setStatus('success');
-        }
-        client.end();
+    try {
+      const response = await fetch(`http://192.168.10.101:1880/${topic}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ valor }), // Se espera que el Function node en Node-RED use msg.payload.valor
       });
-    });
 
-    client.on('error', (err) => {
-      console.error('Error de conexión MQTT:', err);
+      if (!response.ok) {
+        throw new Error('Error en la respuesta del servidor');
+      }
+
+      setStatus('success');
+    } catch (error) {
+      console.error('Error al enviar valor por HTTP:', error);
       setStatus('error');
-      client.end();
-    });
+    }
   };
 
   return (
