@@ -11,7 +11,7 @@ export default function MqttShowValue({ topic }: MqttShowValueProps) {
   const [valor, setValor] = useState<string | null>(null);
 
   useEffect(() => {
-    const client = mqtt.connect('ws://localhost:1884', {
+    const client = mqtt.connect('ws://192.168.10.101:1884', {
       clientId: 'web_' + Math.random().toString(16).slice(2, 8),
       connectTimeout: 4000,
       reconnectPeriod: 1000,
@@ -32,6 +32,7 @@ export default function MqttShowValue({ topic }: MqttShowValueProps) {
     client.on('message', (t, message) => {
       if (t === topic) {
         setValor(message.toString());
+        console.log('📥 Mensaje recibido en', topic, ':', message.toString());
       }
     });
 

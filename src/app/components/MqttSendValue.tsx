@@ -14,12 +14,12 @@ export default function MqttSendValue({ topic }: MqttSendValueProps) {
   const handleSend = () => {
     if (!topic || valor.trim() === '') return;
 
-    const client = mqtt.connect('ws://localhost:1884');
+    const client = mqtt.connect('ws://192.168.10.101:1884');
 
     setStatus('sending');
 
     client.on('connect', () => {
-      console.log('Conectado a EMQX MQTT. Publicando:', valor, 'en', topic);
+      console.log('Conectado a Mosquitto MQTT. Publicando:', valor, 'en', topic);
       client.publish(topic, valor, {}, (err) => {
         if (err) {
           console.error('Error al publicar:', err);
