@@ -1,123 +1,76 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import SensorActuatorModal from './NewElementModal';
 import ProjectModal from './NewProjectModal';
 import SensorDetailsModal from './SensorDetailsModal';
 
+type Elemento = {
+  id: number;
+  nombre: string;
+};
+
 const ElementList = ({ title }: { title?: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
-  const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
+  const [elementos, setElementos] = useState<Elemento[]>([]);
+  const [elementoAEditar, setElementoAEditar] = useState<Elemento | null>(null);
   const [sensorSeleccionado, setSensorSeleccionado] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleAddClick = () => {
     setElementoAEditar(null);
     setIsModalOpen(true);
   };
 
-  const handleEditClick = (elemento: { id: number; nombre: string }) => {
+  const handleEditClick = (elemento: Elemento) => {
     setElementoAEditar(elemento);
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = async (id: number) => {
+  const handleDeleteClick = useCallback(async (id: number) => {
     const confirmar = confirm('¿Seguro que desea eliminar este elemento?');
     if (!confirmar) return;
 
     try {
-      setLoading(true);
-      let endpoint = '';
-      if (title === 'Sensores') endpoint = 'sensores';
-      else if (title === 'Actuadores') endpoint = 'actuadores';
-      else if (title === 'Proyectos') endpoint = 'proyectos';
-      else return;
-
-      const res = await fetch(`/api/${endpoint}/${id}`, { 
-        method: 'DELETE' 
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      await fetchData();
+      const res = await fetch(`/api/sensores/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al eliminar el sensor');
+      fetchSensores();
     } catch (error) {
-      console.error('Error en la eliminación:', error);
-      setError(`Error al eliminar el elemento: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setLoading(false);
+      console.error('Error al eliminar sensor:', error);
     }
-  };
+  }, []);
 
   const handleNombreClick = async (id: number) => {
-    if (title !== 'Sensores') return;
-
     try {
-      setLoading(true);
       const res = await fetch(`/api/sensores/${id}`);
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
+      if (!res.ok) throw new Error('Error al obtener detalle del sensor');
       const data = await res.json();
-
-      // Adaptación para Supabase (la estructura puede variar)
-      const sensorData = {
-        ...data,
-        proyectos: data.proyectos || [],
-        id: data.id || data.sensor_id // Asegurar compatibilidad
-      };
-
-      setSensorSeleccionado(sensorData);
+      data.proyectos = data.proyectos?.map((ps: any) => ps.proyecto) ?? [];
+      setSensorSeleccionado(data);
     } catch (error) {
       console.error('Error al obtener detalle del sensor:', error);
-      setError(`Error al cargar detalles: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const fetchData = async () => {
+  const fetchSensores = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      let endpoint = '';
-      if (title === 'Sensores') endpoint = 'sensores';
-      else if (title === 'Actuadores') endpoint = 'actuadores';
-      else if (title === 'Proyectos') endpoint = 'proyectos';
-      else return;
-
-      const res = await fetch(`/api/${endpoint}`);
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
+      const res = await fetch('/api/sensores');
+      if (!res.ok) throw new Error('Error al obtener sensores');
       const data = await res.json();
-
-      // Normalización de datos para Supabase
-      const normalizados = data.map((item: any) => ({
-        id: item.id || item.sensor_id || item.actuator_id || item.project_id,
-        nombre: item.nombre || item.name || 'Sin nombre'
+      const sensores = data.map((sensor: any) => ({
+        id: sensor.sensor_id,
+        nombre: sensor.nombre,
       }));
-
-      setElementos(normalizados);
+      setElementos(sensores);
     } catch (error) {
-      console.error('Error al obtener elementos:', error);
-      setError(`Error al cargar datos: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setLoading(false);
+      console.error('Error al obtener sensores:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [title]);
+    if (title === 'Sensores') {
+      fetchSensores();
+    }
+  }, [title, fetchSensores]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -125,94 +78,62 @@ const ElementList = ({ title }: { title?: string }) => {
         {title}
       </h2>
 
-      {loading && (
-        <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-          <p>Cargando...</p>
-        </div>
+      {elementos.length === 0 && (
+        <p className="text-gray-500">No hay elementos disponibles.</p>
       )}
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-          <button 
-            onClick={() => setError(null)} 
-            className="float-right font-bold"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {!loading && !error && (
-        <>
-          <div className="space-y-4">
-            {elementos.map((el) => (
-              <div
-                key={el.id}
-                className="flex items-center justify-between p-4 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-              >
-                <button
-                  className="text-left text-gray-800 font-medium hover:text-blue-600 transition-colors flex-1"
-                  onClick={() => handleNombreClick(el.id)}
-                >
-                  {el.nombre}
-                </button>
-                <div className="flex space-x-2">
-                  <button
-                    className="text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-                    onClick={() => handleEditClick(el)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    className="text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                    onClick={() => handleDeleteClick(el.id)}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={handleAddClick}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium"
-              disabled={loading}
+      <ul className="divide-y divide-gray-200">
+        {elementos.map((elemento) => (
+          <li key={elemento.id} className="py-4 flex justify-between items-center">
+            <span
+              className="text-blue-600 cursor-pointer hover:underline"
+              onClick={() => handleNombreClick(elemento.id)}
             >
-              {loading ? 'Cargando...' : '+'}
-            </button>
-          </div>
-        </>
+              {elemento.nombre}
+            </span>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handleEditClick(elemento)}
+                className="text-yellow-600 hover:text-yellow-800"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleDeleteClick(elemento.id)}
+                className="text-red-600 hover:text-red-800"
+              >
+                Eliminar
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        onClick={handleAddClick}
+        className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Agregar {title?.slice(0, -1)}
+      </button>
+
+      {title === 'Sensores' && isModalOpen && (
+        <SensorActuatorModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          initialData={elementoAEditar}
+          onSave={fetchSensores}
+        />
       )}
 
-      {isModalOpen &&
-        (title === 'Proyectos' ? (
-          <ProjectModal
-            onClose={() => {
-              setIsModalOpen(false);
-              setElementoAEditar(null);
-              fetchData();
-            }}
-            onSave={fetchData}
-            proyectoAEditar={elementoAEditar ?? undefined}
-          />
-        ) : (
-          <SensorActuatorModal
-            title={title}
-            onClose={() => {
-              setIsModalOpen(false);
-              setElementoAEditar(null);
-              fetchData();
-            }}
-            onSave={fetchData}
-            elementoAEditar={elementoAEditar ?? undefined}
-          />
-        ))}
-      
-      {sensorSeleccionado && title === 'Sensores' && (
+      {title === 'Proyectos' && isModalOpen && (
+        <ProjectModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          initialData={elementoAEditar}
+        />
+      )}
+
+      {title === 'Sensores' && sensorSeleccionado && (
         <SensorDetailsModal
           sensor={sensorSeleccionado}
           onClose={() => setSensorSeleccionado(null)}
