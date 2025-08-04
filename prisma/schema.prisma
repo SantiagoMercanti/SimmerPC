@@ -13,11 +13,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  user_id   Int    @id @default(autoincrement())
-  username  String
-  email     String
-  password  String
+model UserMetadata {
+  id        String   @id
   nombre    String
   apellido  String
   tipo      String @default("operator")
