@@ -140,7 +140,7 @@ const SensorActuatorModal: React.FC<SensorActuatorModalProps> = ({
           <input
             type="text"
             name="fuente"
-            placeholder="Fuente de datos (API)"
+            placeholder="Fuente de datos (topic MQTT)"
             className="w-full border border-black rounded px-3 py-2 placeholder-gray-700 text-black"
             value={form.fuente}
             onChange={handleChange}

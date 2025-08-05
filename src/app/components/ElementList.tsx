@@ -5,12 +5,14 @@ import SensorActuatorModal from './NewElementModal';
 import ProjectModal from './NewProjectModal';
 import SensorDetailsModal from './SensorDetailsModal';
 import { client as supabase } from '@/supabase/client';
+import ActuatorDetailsModal from './ActuatorDetailsModal';
 
 const ElementList = ({ title }: { title?: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
   const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
   const [sensorSeleccionado, setSensorSeleccionado] = useState<any>(null);
+  const [actuadorSeleccionado, setActuadorSeleccionado] = useState<any>(null);
 
   const handleAddClick = () => {
     setElementoAEditar(null);
@@ -42,10 +44,9 @@ const ElementList = ({ title }: { title?: string }) => {
     }
   };
 
-  const handleNombreClick = async (id: number) => {
-    if (title !== 'Sensores') return;
-
-    try {
+const handleNombreClick = async (id: number) => {
+  try {
+    if (title === 'Sensores') {
       const { data, error } = await supabase
         .from('sensores')
         .select('*, proyectos(proyecto_id, nombre, descripcion)')
@@ -59,10 +60,27 @@ const ElementList = ({ title }: { title?: string }) => {
 
       data.proyectos = data.proyectos ? [data.proyectos] : [];
       setSensorSeleccionado(data);
-    } catch (error) {
-      console.error('Error al obtener detalle del sensor:', error);
+
+    } else if (title === 'Actuadores') {
+      const { data, error } = await supabase
+        .from('actuadores')
+        .select('*, proyectos(proyecto_id, nombre, descripcion)')
+        .eq('actuador_id', id)
+        .single();
+
+      if (error || !data) {
+        console.error('Actuador no encontrado:', error);
+        return;
+      }
+
+      data.proyectos = data.proyectos ? [data.proyectos] : [];
+      setActuadorSeleccionado(data);
     }
-  };
+  } catch (error) {
+    console.error('Error al obtener detalle:', error);
+  }
+};
+
 
   const fetchData = async () => {
     try {
@@ -166,6 +184,14 @@ const ElementList = ({ title }: { title?: string }) => {
           onClose={() => setSensorSeleccionado(null)}
         />
       )}
+      
+      {actuadorSeleccionado && title === 'Actuadores' && (
+        <ActuatorDetailsModal
+          actuador={actuadorSeleccionado}
+          onClose={() => setActuadorSeleccionado(null)}
+        />
+      )}
+
     </div>
   );
 };
