@@ -1,19 +1,15 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import SensorActuatorModal from './NewElementModal';
 import ProjectModal from './NewProjectModal';
 import SensorDetailsModal from './SensorDetailsModal';
-
-type Elemento = {
-  id: number;
-  nombre: string;
-};
+import { client as supabase } from '@/supabase/client';
 
 const ElementList = ({ title }: { title?: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [elementos, setElementos] = useState<Elemento[]>([]);
-  const [elementoAEditar, setElementoAEditar] = useState<Elemento | null>(null);
+  const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
+  const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
   const [sensorSeleccionado, setSensorSeleccionado] = useState<any>(null);
 
   const handleAddClick = () => {
@@ -21,56 +17,78 @@ const ElementList = ({ title }: { title?: string }) => {
     setIsModalOpen(true);
   };
 
-  const handleEditClick = (elemento: Elemento) => {
+  const handleEditClick = (elemento: { id: number; nombre: string }) => {
     setElementoAEditar(elemento);
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = useCallback(async (id: number) => {
+  const handleDeleteClick = async (id: number) => {
     const confirmar = confirm('¿Seguro que desea eliminar este elemento?');
     if (!confirmar) return;
 
     try {
-      const res = await fetch(`/api/sensores/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error al eliminar el sensor');
-      fetchSensores();
+      let table = '';
+      if (title === 'Sensores') table = 'sensores';
+      else if (title === 'Actuadores') table = 'actuadores';
+      else if (title === 'Proyectos') table = 'proyectos';
+      else return;
+
+      const { error } = await supabase.from(table).delete().eq(`${table.slice(0, -1)}_id`, id);
+      if (error) throw error;
+
+      fetchData();
     } catch (error) {
-      console.error('Error al eliminar sensor:', error);
+      console.error('Error en la eliminación:', error);
     }
-  }, []);
+  };
 
   const handleNombreClick = async (id: number) => {
+    if (title !== 'Sensores') return;
+
     try {
-      const res = await fetch(`/api/sensores/${id}`);
-      if (!res.ok) throw new Error('Error al obtener detalle del sensor');
-      const data = await res.json();
-      data.proyectos = data.proyectos?.map((ps: any) => ps.proyecto) ?? [];
+      const { data, error } = await supabase
+        .from('sensores')
+        .select('*, proyectos(proyecto_id, nombre, descripcion)')
+        .eq('sensor_id', id)
+        .single();
+
+      if (error || !data) {
+        console.error('Sensor no encontrado:', error);
+        return;
+      }
+
+      data.proyectos = data.proyectos ? [data.proyectos] : [];
       setSensorSeleccionado(data);
     } catch (error) {
       console.error('Error al obtener detalle del sensor:', error);
     }
   };
 
-  const fetchSensores = useCallback(async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/sensores');
-      if (!res.ok) throw new Error('Error al obtener sensores');
-      const data = await res.json();
-      const sensores = data.map((sensor: any) => ({
-        id: sensor.sensor_id,
-        nombre: sensor.nombre,
+      let table = '';
+      if (title === 'Sensores') table = 'sensores';
+      else if (title === 'Actuadores') table = 'actuadores';
+      else if (title === 'Proyectos') table = 'proyectos';
+      else return;
+
+      const { data, error } = await supabase.from(table).select('*');
+      if (error) throw error;
+
+      const normalizados = data.map((item: any) => ({
+        id: item.sensor_id ?? item.actuator_id ?? item.project_id ?? item.id,
+        nombre: item.nombre,
       }));
-      setElementos(sensores);
+
+      setElementos(normalizados);
     } catch (error) {
-      console.error('Error al obtener sensores:', error);
+      console.error('Error al obtener elementos:', error);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    if (title === 'Sensores') {
-      fetchSensores();
-    }
-  }, [title, fetchSensores]);
+    fetchData();
+  }, [title]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -78,62 +96,71 @@ const ElementList = ({ title }: { title?: string }) => {
         {title}
       </h2>
 
-      {elementos.length === 0 && (
-        <p className="text-gray-500">No hay elementos disponibles.</p>
-      )}
-
-      <ul className="divide-y divide-gray-200">
-        {elementos.map((elemento) => (
-          <li key={elemento.id} className="py-4 flex justify-between items-center">
-            <span
-              className="text-blue-600 cursor-pointer hover:underline"
-              onClick={() => handleNombreClick(elemento.id)}
+      <div className="space-y-4">
+        {elementos.map((el) => (
+          <div
+            key={el.id}
+            className="flex items-center justify-between p-4 bg-gray-100 rounded-md"
+          >
+            <button
+              className="text-left text-gray-800 font-bold hover:text-gray-500"
+              onClick={() => handleNombreClick(el.id)}
             >
-              {elemento.nombre}
-            </span>
+              {el.nombre}
+            </button>
             <div className="flex space-x-2">
               <button
-                onClick={() => handleEditClick(elemento)}
-                className="text-yellow-600 hover:text-yellow-800"
+                className="text-blue-500 hover:text-blue-700"
+                onClick={() => handleEditClick(el)}
               >
                 Editar
               </button>
               <button
-                onClick={() => handleDeleteClick(elemento.id)}
-                className="text-red-600 hover:text-red-800"
+                className="text-red-500 hover:text-red-700"
+                onClick={() => handleDeleteClick(el.id)}
               >
                 Eliminar
               </button>
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
 
-      <button
-        onClick={handleAddClick}
-        className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
-        Agregar {title?.slice(0, -1)}
-      </button>
+      <div className="mt-6 text-center">
+        <button
+          onClick={handleAddClick}
+          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+        >
+          +
+        </button>
+      </div>
 
-      {title === 'Sensores' && isModalOpen && (
-        <SensorActuatorModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          initialData={elementoAEditar}
-          onSave={fetchSensores}
-        />
-      )}
+      {isModalOpen &&
+        (title === 'Proyectos' ? (
+          <ProjectModal
+            onClose={() => {
+              setIsModalOpen(false);
+              setElementoAEditar(null);
+              fetchData();
+            }}
+            onSave={fetchData}
+            proyectoAEditar={elementoAEditar ?? undefined}
+          />
+        ) : (
+          <SensorActuatorModal
+            title={title}
+            onClose={() => {
+              setIsModalOpen(false);
+              setElementoAEditar(null);
+              fetchData();
+            }}
+            onSave={fetchData}
+            elementoAEditar={elementoAEditar ?? undefined}
+          />
+        ))
+      }
 
-      {title === 'Proyectos' && isModalOpen && (
-        <ProjectModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          initialData={elementoAEditar}
-        />
-      )}
-
-      {title === 'Sensores' && sensorSeleccionado && (
+      {sensorSeleccionado && title === 'Sensores' && (
         <SensorDetailsModal
           sensor={sensorSeleccionado}
           onClose={() => setSensorSeleccionado(null)}
