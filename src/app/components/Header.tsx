@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { LogOut, Shield } from 'lucide-react';
 
 const Header = () => {
   const pathname = usePathname();
@@ -21,7 +22,6 @@ const Header = () => {
       } = await supabase.auth.getSession();
 
       const userId = session?.user?.id;
-
       if (!userId) return;
 
       const { data, error } = await supabase
@@ -49,18 +49,25 @@ const Header = () => {
   if (shouldHide) return null;
 
   return (
-    <header className="w-full bg-blue-700 text-white shadow-md px-6 py-4 flex justify-between items-center">
-      <h1 className="text-xl font-bold">S I M M E R</h1>
-      <div className="space-x-4">
+    <header className="w-full bg-blue-800 text-white shadow-md px-6 py-4 flex justify-between items-center">
+      <h1 className="text-2xl tracking-wider text-white">S I M M E R</h1>
+
+      <div className="flex items-center gap-4">
         {userType === 'admin' && (
-          <button className="bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-md transition">
-            Nivel de usuarios
+          <button
+            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-md transition text-sm font-medium"
+            onClick={() => router.push('/admin')}
+          >
+            <Shield size={18} />
+            Admin
           </button>
         )}
         <button
           onClick={handleLogout}
-          className="bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-md transition">        
-          Cerrar sesión
+          title="Cerrar sesión"
+          className="p-2 rounded-full hover:bg-blue-600 transition"
+        >
+          <LogOut size={20} />
         </button>
       </div>
     </header>
