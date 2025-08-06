@@ -1,15 +1,16 @@
-import { PrismaClient } from '@prisma/client';
-import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server'
 
-const prisma = new PrismaClient();
-
-// Obtener sensor por ID
+// GET: Obtener sensor por ID
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+  const id = Number(params.id)
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
 
   try {
     const sensor = await prisma.sensor.findUnique({
-      where: { sensor_id: Number(id) },
+      where: { sensor_id: id },
       include: {
         proyectos: {
           include: {
@@ -17,63 +18,80 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
           },
         },
       },
-    });
+    })
 
     if (!sensor) {
-      return NextResponse.json({ error: 'Sensor no encontrado' }, { status: 404 });
+      return NextResponse.json({ error: 'Sensor no encontrado' }, { status: 404 })
     }
 
-    return NextResponse.json(sensor);
+    return NextResponse.json(sensor)
   } catch (error) {
-    console.error('Error al obtener sensor:', error);
-    return NextResponse.json({ error: 'Error al obtener sensor' }, { status: 500 });
+    console.error('Error al obtener sensor:', error)
+    return NextResponse.json({ error: 'Error al obtener sensor' }, { status: 500 })
   }
 }
 
-// Actualizar sensor por ID
+// PUT: Actualizar sensor por ID
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
-  const body = await req.json();
+  const id = Number(params.id)
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
 
   try {
-    const sensorActualizado = await prisma.sensor.update({
-      where: { sensor_id: Number(id) },
-      data: {
-        nombre: body.nombre,
-        descripcion: body.descripcion,
-        unidad_de_medida: body.unidad_de_medida,
-        valor_min: parseFloat(body.valor_min),
-        valor_max: parseFloat(body.valor_max),
-        fuente_datos: body.fuente_datos || '',
-      },
-    });
+    const body = await req.json()
+    const {
+      nombre,
+      descripcion,
+      unidad_de_medida,
+      valor_min,
+      valor_max,
+      fuente_datos,
+    } = body
 
-    return NextResponse.json(sensorActualizado);
+    const sensorActualizado = await prisma.sensor.update({
+      where: { sensor_id: id },
+      data: {
+        nombre,
+        descripcion,
+        unidad_de_medida,
+        valor_min: parseFloat(valor_min),
+        valor_max: parseFloat(valor_max),
+        fuente_datos: fuente_datos || '',
+      },
+    })
+
+    return NextResponse.json(sensorActualizado)
   } catch (error) {
-    console.error('Error al actualizar sensor:', error);
-    return NextResponse.json({ error: 'Error al actualizar sensor' }, { status: 500 });
+    console.error('Error al actualizar sensor:', error)
+    return NextResponse.json({ error: 'Error al actualizar sensor' }, { status: 500 })
   }
 }
 
-// Eliminar sensor por ID
+// DELETE: Eliminar sensor por ID
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
-  const sensorId = Number(id);
+  const id = Number(params.id)
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
 
   try {
-    // 1. Eliminar relaciones en ProyectoSensor
+    // 1. Eliminar relaciones
     await prisma.proyectoSensor.deleteMany({
-      where: { sensorId: sensorId },
-    });
+      where: { sensorId: id },
+    })
 
     // 2. Eliminar el sensor
     await prisma.sensor.delete({
-      where: { sensor_id: sensorId },
-    });
+      where: { sensor_id: id },
+    })
 
-    return NextResponse.json({ message: 'Sensor eliminado correctamente' });
+    return NextResponse.json({ message: 'Sensor eliminado correctamente' })
   } catch (error: any) {
-    console.error('Error al eliminar sensor:', error);
-    return NextResponse.json({ error: 'Error al eliminar sensor', detalle: error.message }, { status: 500 });
+    console.error('Error al eliminar sensor:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar sensor', detalle: error.message },
+      { status: 500 }
+    )
   }
 }

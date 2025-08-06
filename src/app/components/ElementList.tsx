@@ -5,6 +5,7 @@ import SensorActuatorModal from './NewElementModal';
 import ProjectModal from './NewProjectModal';
 import SensorDetailsModal from './SensorDetailsModal';
 import ActuatorDetailsModal from './ActuatorDetailsModal';
+import { supabase } from '@/lib/supabase';
 
 const ElementList = ({ title }: { title?: string }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,52 +29,69 @@ const ElementList = ({ title }: { title?: string }) => {
     if (!confirmar) return;
 
     try {
-      let url = '';
-      if (title === 'Sensores') url = `/api/sensores/${id}`;
-      else if (title === 'Actuadores') url = `/api/actuadores/${id}`;
-      else if (title === 'Proyectos') url = `/api/proyectos/${id}`;
-      else return;
+      let table = '';
+      let key = '';
+      if (title === 'Sensores') {
+        table = 'Sensor';
+        key = 'sensor_id';
+      } else if (title === 'Actuadores') {
+        table = 'Actuador';
+        key = 'actuator_id';
+      } else if (title === 'Proyectos') {
+        table = 'Proyecto';
+        key = 'project_id';
+      } else return;
 
-      const res = await fetch(url, { method: 'DELETE' });
+      const { error } = await supabase.from(table).delete().eq(key, id);
+      if (error) throw error;
 
-      if (res.ok) {
-        fetchData();
-      } else {
-        console.error('Error al eliminar el elemento');
-      }
+      fetchData();
     } catch (error) {
-      console.error('Error en la eliminación:', error);
+      console.error('Error en la eliminación con Supabase:', error);
     }
   };
 
   const handleNombreClick = async (id: number) => {
     try {
       if (title === 'Sensores') {
-        const res = await fetch(`/api/sensores/${id}`);
-        const data = await res.json();
+        const { data, error } = await supabase
+          .from('Sensor')
+          .select('*, proyectos:ProyectoSensor(proyecto:Proyecto(*))')
+          .eq('sensor_id', id)
+          .single();
+
+        if (error) throw error;
+
         data.proyectos = data.proyectos?.map((ps: any) => ps.proyecto) ?? [];
         setSensorSeleccionado(data);
       } else if (title === 'Actuadores') {
-        const res = await fetch(`/api/actuadores/${id}`);
-        const data = await res.json();
+        const { data, error } = await supabase
+          .from('Actuador')
+          .select('*, proyectos:ProyectoActuador(proyecto:Proyecto(*))')
+          .eq('actuator_id', id)
+          .single();
+
+        if (error) throw error;
+
         data.proyectos = data.proyectos?.map((pa: any) => pa.proyecto) ?? [];
         setActuadorSeleccionado(data);
       }
     } catch (error) {
-      console.error('Error al obtener detalle:', error);
+      console.error('Error al obtener detalle desde Supabase:', error);
     }
   };
 
   const fetchData = async () => {
     try {
-      let url = '';
-      if (title === 'Sensores') url = '/api/sensores';
-      else if (title === 'Actuadores') url = '/api/actuadores';
-      else if (title === 'Proyectos') url = '/api/proyectos';
+      let table = '';
+      if (title === 'Sensores') table = 'Sensor';
+      else if (title === 'Actuadores') table = 'Actuador';
+      else if (title === 'Proyectos') table = 'Proyecto';
       else return;
 
-      const res = await fetch(url);
-      const data = await res.json();
+      const { data, error } = await supabase.from(table).select('*');
+
+      if (error) throw error;
 
       const normalizados = data.map((item: any) => ({
         id: item.sensor_id ?? item.actuator_id ?? item.project_id ?? item.id,
@@ -82,7 +100,7 @@ const ElementList = ({ title }: { title?: string }) => {
 
       setElementos(normalizados);
     } catch (error) {
-      console.error('Error al obtener elementos:', error);
+      console.error('Error al obtener elementos desde Supabase:', error);
     }
   };
 

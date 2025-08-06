@@ -1,72 +1,89 @@
-import { PrismaClient } from '@prisma/client';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
-const prisma = new PrismaClient();
+type Params = { params: { id: string } }
 
-// Obtener un actuador por ID
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+// GET /api/actuadores/[id]
+export async function GET(_: NextRequest, { params }: Params) {
+  const id = Number(params.id)
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
 
   try {
     const actuador = await prisma.actuador.findUnique({
-      where: { actuator_id: Number(id) },
-    });
+      where: { actuator_id: id },
+    })
 
     if (!actuador) {
-      return NextResponse.json({ error: 'Actuador no encontrado' }, { status: 404 });
+      return NextResponse.json({ error: 'Actuador no encontrado' }, { status: 404 })
     }
 
-    return NextResponse.json(actuador);
+    return NextResponse.json(actuador)
   } catch (error) {
-    console.error('Error al obtener actuador:', error);
-    return NextResponse.json({ error: 'Error al obtener actuador' }, { status: 500 });
+    console.error('Error al obtener actuador:', error)
+    return NextResponse.json({ error: 'Error al obtener actuador' }, { status: 500 })
   }
 }
 
-// Actualizar un actuador por ID
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
-  const body = await req.json();
+// PUT /api/actuadores/[id]
+export async function PUT(req: NextRequest, { params }: Params) {
+  const id = Number(params.id)
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
 
   try {
+    const body = await req.json()
+    const { nombre, descripcion, unidad_de_medida, valor_min, valor_max, fuente_datos } = body
+
+    if (!nombre || !descripcion || !unidad_de_medida || valor_min === undefined || valor_max === undefined) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
+    }
+
     const actuadorActualizado = await prisma.actuador.update({
-      where: { actuator_id: Number(id) },
+      where: { actuator_id: id },
       data: {
-        nombre: body.nombre,
-        descripcion: body.descripcion,
-        unidad_de_medida: body.unidad_de_medida,
-        valor_min: parseFloat(body.valor_min),
-        valor_max: parseFloat(body.valor_max),
-        fuente_datos: body.fuente_datos || '',
+        nombre,
+        descripcion,
+        unidad_de_medida,
+        valor_min: parseFloat(valor_min),
+        valor_max: parseFloat(valor_max),
+        fuente_datos: fuente_datos || '',
       },
-    });
+    })
 
-    return NextResponse.json(actuadorActualizado);
+    return NextResponse.json(actuadorActualizado)
   } catch (error) {
-    console.error('Error al actualizar actuador:', error);
-    return NextResponse.json({ error: 'Error al actualizar actuador' }, { status: 500 });
+    console.error('Error al actualizar actuador:', error)
+    return NextResponse.json({ error: 'Error al actualizar actuador' }, { status: 500 })
   }
 }
 
-// Eliminar un actuador por ID
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
-  const actuadorId = Number(id);
+// DELETE /api/actuadores/[id]
+export async function DELETE(_: NextRequest, { params }: Params) {
+  const id = Number(params.id)
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
 
   try {
-    // 1. Eliminar relaciones en ProyectoActuador
+    // Eliminar relaciones en ProyectoActuador
     await prisma.proyectoActuador.deleteMany({
-      where: { actuadorId: actuadorId },
-    });
+      where: { actuadorId: id },
+    })
 
-    // 2. Eliminar el actuador
+    // Eliminar actuador
     await prisma.actuador.delete({
-      where: { actuator_id: actuadorId },
-    });
+      where: { actuator_id: id },
+    })
 
-    return NextResponse.json({ message: 'Actuador eliminado correctamente' });
+    return NextResponse.json({ message: 'Actuador eliminado correctamente' })
   } catch (error: any) {
-    console.error('Error al eliminar actuador:', error);
-    return NextResponse.json({ error: 'Error al eliminar actuador', detalle: error.message }, { status: 500 });
+    console.error('Error al eliminar actuador:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar actuador', detalle: error.message },
+      { status: 500 }
+    )
   }
 }
