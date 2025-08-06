@@ -32,12 +32,10 @@ export default async function RootLayout({
     data: { session },
   } = await supabase.auth.getSession();
 
-  const showHeader = pathname !== "/login";
-
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {showHeader && <Header />}
+        <Header />
         <main>{children}</main>
       </body>
     </html>

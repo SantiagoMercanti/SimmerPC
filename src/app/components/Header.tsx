@@ -1,8 +1,15 @@
 'use client';
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 
 const Header = () => {
+  const pathname = usePathname();
+  const hideIn = ['/login'];
+  const shouldHide = hideIn.includes(pathname);
+
+  if (shouldHide) return null;
+
   return (
     <header className="w-full bg-blue-700 text-white shadow-md px-6 py-4 flex justify-between items-center">
       <h1 className="text-xl font-bold">S I M M E R</h1>
