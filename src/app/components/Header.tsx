@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const Header = () => {
   const pathname = usePathname();
-  const hideIn = ['/login'];
+  const hideIn = ['/login', '/register'];
   const shouldHide = hideIn.includes(pathname);
 
   if (shouldHide) return null;
