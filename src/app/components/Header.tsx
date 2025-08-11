@@ -18,16 +18,21 @@ const Header = () => {
   useEffect(() => {
     const fetchUserType = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const userId = session?.user?.id;
-      if (!userId) return;
+      if (userError) {
+        console.error('Error al obtener usuario:', userError.message);
+        return;
+      }
+
+      if (!user) return;
 
       const { data, error } = await supabase
         .from('UserMetadata')
         .select('tipo')
-        .eq('id', userId)
+        .eq('id', user.id)
         .single();
 
       if (error) {
@@ -50,8 +55,14 @@ const Header = () => {
 
   return (
     <header className="w-full bg-blue-800 text-white shadow-md px-6 py-4 flex justify-between items-center">
-      <h1 className="text-2xl tracking-wider text-white">S I M M E R</h1>
-
+    <button
+      onClick={() => router.push('/dashboard')}
+      className="text-2xl tracking-wider text-white hover:text-gray-300 focus:outline-none"
+      aria-label="Ir al Dashboard"
+      type="button"
+    >
+      S I M M E R
+    </button>
       <div className="flex items-center gap-4">
         {userType === 'admin' && (
           <button

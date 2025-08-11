@@ -7,7 +7,7 @@ import SensorDetailsModal from './SensorDetailsModal';
 import ActuatorDetailsModal from './ActuatorDetailsModal';
 import { supabase } from '@/lib/supabase';
 
-const ElementList = ({ title }: { title?: string }) => {
+const ElementList = ({ title, canEdit = false }: { title?: string; canEdit?: boolean }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [elementos, setElementos] = useState<{ id: number; nombre: string }[]>([]);
   const [elementoAEditar, setElementoAEditar] = useState<{ id: number; nombre: string } | null>(null);
@@ -108,7 +108,7 @@ const ElementList = ({ title }: { title?: string }) => {
     fetchData();
   }, [title]);
 
-  return (
+   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-2xl font-bold text-gray-800 border-b-2 border-blue-500 pb-2 mb-6">
         {title}
@@ -126,33 +126,38 @@ const ElementList = ({ title }: { title?: string }) => {
             >
               {el.nombre}
             </button>
-            <div className="flex space-x-2">
-              <button
-                className="text-blue-500 hover:text-blue-700"
-                onClick={() => handleEditClick(el)}
-              >
-                Editar
-              </button>
-              <button
-                className="text-red-500 hover:text-red-700"
-                onClick={() => handleDeleteClick(el.id)}
-              >
-                Eliminar
-              </button>
-            </div>
+            {canEdit && (
+              <div className="flex space-x-2">
+                <button
+                  className="text-blue-500 hover:text-blue-700"
+                  onClick={() => handleEditClick(el)}
+                >
+                  Editar
+                </button>
+                <button
+                  className="text-red-500 hover:text-red-700"
+                  onClick={() => handleDeleteClick(el.id)}
+                >
+                  Eliminar
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      <div className="mt-6 text-center">
-        <button
-          onClick={handleAddClick}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
-        >
-          +
-        </button>
-      </div>
+      {canEdit && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleAddClick}
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+          >
+            +
+          </button>
+        </div>
+      )}
 
+      {/* Modales */}
       {isModalOpen &&
         (title === 'Proyectos' ? (
           <ProjectModal
@@ -175,8 +180,7 @@ const ElementList = ({ title }: { title?: string }) => {
             onSave={fetchData}
             elementoAEditar={elementoAEditar ?? undefined}
           />
-        )
-        )}
+        ))}
       {sensorSeleccionado && title === 'Sensores' && (
         <SensorDetailsModal
           sensor={sensorSeleccionado}
