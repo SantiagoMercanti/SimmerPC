@@ -22,7 +22,7 @@ const Header = () => {
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError) {
+      if (userError && !shouldHide) {
         console.error('Error al obtener usuario:', userError.message);
         return;
       }

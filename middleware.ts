@@ -6,19 +6,43 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res });
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Redirige a /login si no hay sesión y está accediendo a una ruta protegida
-  const protectedRoutes = ['/dashboard', '/proyectos', '/sensores', '/actuadores'];
+  const pathname = req.nextUrl.pathname;
 
-  if (!session && protectedRoutes.some((route) => req.nextUrl.pathname.startsWith(route))) {
+  // Rutas públicas sin sesión
+  const publicRoutes = ['/login', '/register'];
+
+  // 1️⃣ Bloqueo global antes de login
+  if (!user && !publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL('/login', req.url));
+  }
+
+  // 2️⃣ Si hay sesión y está en /login o /register → redirigir al dashboard
+  if (user && publicRoutes.includes(pathname)) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
+  }
+
+  // 3️⃣ Bloqueo de /admin si no es tipo 'admin'
+  if (user && pathname.startsWith('/admin')) {
+    const { data: metadata, error } = await supabase
+      .from('UserMetadata')
+      .select('tipo')
+      .eq('id', user.id)
+      .single();
+
+    if (error || !metadata || metadata.tipo !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
   }
 
   return res;
 }
 
+// Aplica a todas las rutas menos archivos estáticos
 export const config = {
-  matcher: ['/dashboard/:path*', '/proyectos/:path*', '/sensores/:path*', '/actuadores/:path*'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };
